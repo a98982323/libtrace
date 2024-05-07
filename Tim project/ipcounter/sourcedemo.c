@@ -14,6 +14,10 @@
 #include <string.h>
 
 #define Max_items 1000000
+
+uint64_t pkt_ct = 0;
+uint32_t obs_interval = 0;
+
 struct Key_val_pair
 {
 	char key[40];
@@ -91,11 +95,27 @@ static inline void print_ip(struct sockaddr *ip) {
 
 static void per_packet(libtrace_packet_t *packet)
 {
+	struct  timeval ts;
+
+	ts = trace_get_timeval(packet);
+	printf("%ld.%06ld %llu\n", ts.tv_sec, ts.tv_usec, pkt_ct);
+
+	if (obs_interval == 0){
+		obs_interval = ts.tv_sec + 10;
+		printf("Time\t\tPackets\n");
+	}
+
+	while ((uint32_t)ts.tv_sec > obs_interval){
+		printf("%u \t%" PRIu64 "\n", obs_interval, pkt_ct);
+		printf("%ld.%06ld %llu\n", ts.tv_sec, ts.tv_usec, pkt_ct);
+		pkt_ct = 0;
+		obs_interval += 50;
+	}
+	
+	pkt_ct += 1;
 	// create counter struct
 	// struct Counter sip_counter;
 	// struct Counter dip_counter;
-		/* data */
-	
 	// sip address
 	struct sockaddr *addr_ptr;
 	struct sockaddr_storage addr;
@@ -103,22 +123,6 @@ static void per_packet(libtrace_packet_t *packet)
 	// dip address
 	struct sockaddr *daddr_ptr;
 	struct sockaddr_storage daddr;
-
-	
-	// uint16_t port;
-	// uint8_t *mac;
-
-	// init_counter(&counter);
-
-	/* Get the source mac */
-	// mac = trace_get_source_mac(packet);
-	
-	// No need mac address
-	/* If this packet does not contain a MAC address, print "NULL" */
-	// if (mac == NULL) 
-		// printf("NULL ");
-	// else
-		// print_mac(mac);
 
 	/* Get the source IP address */
 
@@ -135,17 +139,19 @@ static void per_packet(libtrace_packet_t *packet)
 
 	addr_ptr = trace_get_source_address(packet, (struct sockaddr *)&addr);
 	daddr_ptr = trace_get_destination_address(packet, (struct sockaddr *)&daddr);
+	
 
-	/* No IP address? Print "NULL" instead */
-	if (addr_ptr == NULL )
-		printf("NULL ");
-	else{
-		// add_item(&Counter, print_ipaddr(addr_ptr));
 
-		print_ip(addr_ptr);
-		print_ip(daddr_ptr);
-		printf("\n");
-	};
+	// /* No IP address? Print "NULL" instead */
+	// if (addr_ptr == NULL )
+	// 	printf("NULL \n");
+	// else{
+	// 	// add_item(&Counter, print_ipaddr(addr_ptr));
+	// 	// printf("Time\t\tPackets\n");
+	// 	// print_ip(addr_ptr);
+	// 	// print_ip(daddr_ptr);
+	// 	// printf("\n");
+	// };
 		// printf("%s %s", print_ip(addr_ptr), print_ip(daddr_ptr));
 
 	// if (daddr_ptr == NULL)
@@ -232,7 +238,7 @@ int main(int argc, char *argv[])
                 return 1;
         }
 		// Adding counter for sip 
-
+		// printf("total packets: %llu\n", pkt_ct);
 
 		//
         libtrace_cleanup(trace, packet);
